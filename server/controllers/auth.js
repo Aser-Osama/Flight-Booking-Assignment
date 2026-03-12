@@ -100,8 +100,88 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+const getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select(
+      "-password -verificationCode -verificationCodeExpires"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (typeof name === "string" && name.trim()) {
+      user.name = name.trim();
+    }
+
+    if (typeof email === "string" && email.trim()) {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (normalizedEmail !== user.email) {
+        const emailInUse = await User.findOne({ email: normalizedEmail });
+
+        if (emailInUse && String(emailInUse._id) !== String(user._id)) {
+          return res.status(400).json({ message: "Email already in use" });
+        }
+
+        user.email = normalizedEmail;
+      }
+    }
+
+    if (typeof password === "string" && password.trim()) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   register,
   login,
   verifyEmail,
+  getProfile,
+  updateProfile,
 };
