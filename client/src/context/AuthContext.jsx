@@ -1,13 +1,10 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
-
-export const AuthContext = createContext(null);
+import { AuthContext } from "./authContext";
 
 const AUTH_STORAGE_KEY = "auth";
 
@@ -52,6 +49,21 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
+  const updateUser = useCallback((nextUser) => {
+    setUser(nextUser);
+
+    setToken((currentToken) => {
+      if (currentToken) {
+        localStorage.setItem(
+          AUTH_STORAGE_KEY,
+          JSON.stringify({ token: currentToken, user: nextUser })
+        );
+      }
+
+      return currentToken;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       token,
@@ -59,19 +71,10 @@ export const AuthProvider = ({ children }) => {
       isLoading,
       login,
       logout,
+      updateUser,
     }),
-    [token, user, isLoading, login, logout]
+    [token, user, isLoading, login, logout, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-
-  return context;
 };
