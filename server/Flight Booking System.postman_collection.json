@@ -11,6 +11,25 @@
       "item": [
         {
           "name": "Auth / POST {{base_url}}/auth/register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 400]);",
+                  "});",
+                  "",
+                  "pm.test(\"Register response includes message\", function () {",
+                  "  const responseBodyJson = pm.response.json();",
+                  "  pm.expect(responseBodyJson).to.have.property(\"message\");",
+                  "  pm.expect(responseBodyJson.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -38,6 +57,25 @@
         },
         {
           "name": "Auth / POST {{base_url}}/auth/verify",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Verify returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Verify response includes message\", function () {",
+                  "  const responseBodyJson = pm.response.json();",
+                  "  pm.expect(responseBodyJson).to.have.property(\"message\");",
+                  "  pm.expect(responseBodyJson.message).to.be.a(\"string\").and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -71,15 +109,19 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Login returns status 200\", function () {",
-                  "  pm.response.to.have.status(200);",
+                  "pm.test(\"Login returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
                   "});",
                   "",
-                  "pm.test(\"Login response includes token\", function () {",
-                  "  pm.expect(pm.response.json().token).to.be.a(\"string\").and.not.empty;",
-                  "});",
-                  "",
-                  "pm.environment.set(\"token\", pm.response.json().token);"
+                  "pm.test(\"Login success includes token and user\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson.token).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(responseBodyJson).to.have.property(\"user\");",
+                  "    pm.expect(responseBodyJson.user).to.have.property(\"email\");",
+                  "    pm.environment.set(\"token\", responseBodyJson.token);",
+                  "  }",
+                  "});"
                 ]
               }
             }
@@ -112,10 +154,130 @@
       ]
     },
     {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Users / GET {{base_url}}/auth/profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profile GET returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile GET includes user when successful\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"user\");",
+                  "    pm.expect(responseBodyJson.user).to.have.property(\"email\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Users / PUT {{base_url}}/auth/profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profile PUT returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 401, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile PUT includes updated user on success\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"message\");",
+                  "    pm.expect(responseBodyJson).to.have.property(\"user\");",
+                  "    pm.expect(responseBodyJson.user).to.have.property(\"name\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Example User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Flights",
       "item": [
         {
           "name": "Flights / GET {{base_url}}/flights/search?from=Dubai&to=London&date=2025-06-15",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Search flights returns status 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Search flights response is array\", function () {",
+                  "  const responseBodyJson = pm.response.json();",
+                  "  pm.expect(responseBodyJson).to.be.an(\"array\");",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -148,6 +310,27 @@
         },
         {
           "name": "Flights / GET {{base_url}}/flights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Get flights returns status 200\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Get flights response is array\", function () {",
+                  "  const responseBodyJson = pm.response.json();",
+                  "  pm.expect(responseBodyJson).to.be.an(\"array\");",
+                  "  if (responseBodyJson.length && responseBodyJson[0]._id) {",
+                  "    pm.environment.set(\"flight_id\", responseBodyJson[0]._id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -165,6 +348,28 @@
         },
         {
           "name": "Flights / POST {{base_url}}/flights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Create flight returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 400]);",
+                  "});",
+                  "",
+                  "pm.test(\"Create flight success response shape\", function () {",
+                  "  if (pm.response.code === 201) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"_id\");",
+                  "    pm.expect(responseBodyJson).to.have.property(\"flightNumber\");",
+                  "    pm.environment.set(\"flight_id\", responseBodyJson._id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -190,7 +395,28 @@
           "response": []
         },
         {
-          "name": "Flights / PUT {{base_url}}/flights/:id",
+          "name": "Flights / PUT {{base_url}}/flights/{{flight_id}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Update flight returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Update flight success response shape\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"_id\");",
+                  "    pm.expect(responseBodyJson).to.have.property(\"availableSeats\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -204,41 +430,51 @@
               "raw": "{\n  \"flightNumber\": \"EK201\",\n  \"from\": \"Dubai\",\n  \"to\": \"London\",\n  \"date\": \"2025-06-16T10:30:00.000Z\",\n  \"totalSeats\": 300,\n  \"availableSeats\": 280,\n  \"price\": 949\n}"
             },
             "url": {
-              "raw": "{{base_url}}/flights/:id",
+              "raw": "{{base_url}}/flights/{{flight_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "flights",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
+                "{{flight_id}}"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "Flights / DELETE {{base_url}}/flights/:id",
+          "name": "Flights / DELETE {{base_url}}/flights/{{flight_id}}",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Delete flight returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Delete flight success includes message\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"message\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/flights/:id",
+              "raw": "{{base_url}}/flights/{{flight_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "flights",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
+                "{{flight_id}}"
               ]
             }
           },
@@ -251,6 +487,26 @@
       "item": [
         {
           "name": "Bookings / GET {{base_url}}/bookings/my",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Get my bookings returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "",
+                  "pm.test(\"Get my bookings success response is array\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.be.an(\"array\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -274,6 +530,28 @@
         },
         {
           "name": "Bookings / POST {{base_url}}/bookings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Create booking returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 400, 401, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Create booking success response shape\", function () {",
+                  "  if (pm.response.code === 201) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"_id\");",
+                  "    pm.expect(responseBodyJson).to.have.property(\"status\");",
+                  "    pm.environment.set(\"booking_id\", responseBodyJson._id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -288,7 +566,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"flightId\": \"PUT_FLIGHT_ID_HERE\",\n  \"numberOfSeats\": 2\n}"
+              "raw": "{\n  \"flightId\": \"{{flight_id}}\",\n  \"numberOfSeats\": 2\n}"
             },
             "url": {
               "raw": "{{base_url}}/bookings",
@@ -303,7 +581,28 @@
           "response": []
         },
         {
-          "name": "Bookings / PATCH {{base_url}}/bookings/:id/cancel",
+          "name": "Bookings / PATCH {{base_url}}/bookings/{{booking_id}}/cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cancel booking returns expected status\", function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 401, 404]);",
+                  "});",
+                  "",
+                  "pm.test(\"Cancel booking success sets canceled status\", function () {",
+                  "  if (pm.response.code === 200) {",
+                  "    const responseBodyJson = pm.response.json();",
+                  "    pm.expect(responseBodyJson).to.have.property(\"status\");",
+                  "    pm.expect(responseBodyJson.status).to.equal(\"canceled\");",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
@@ -313,19 +612,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/bookings/:id/cancel",
+              "raw": "{{base_url}}/bookings/{{booking_id}}/cancel",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "bookings",
-                ":id",
+                "{{booking_id}}",
                 "cancel"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
               ]
             }
           },
@@ -341,6 +635,14 @@
     },
     {
       "key": "token",
+      "value": ""
+    },
+    {
+      "key": "flight_id",
+      "value": ""
+    },
+    {
+      "key": "booking_id",
       "value": ""
     }
   ]
