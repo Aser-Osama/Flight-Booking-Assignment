@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -23,6 +23,12 @@ const Navbar = () => {
         <div className="flex items-center gap-5">
           {token ? (
             <>
+              <Link
+                to="/profile"
+                className="text-base font-medium text-gray-600 hover:text-rose-500 transition-colors"
+              >
+                Profile
+              </Link>
               <Link
                 to="/bookings"
                 className="text-base font-medium text-gray-600 hover:text-rose-500 transition-colors"
